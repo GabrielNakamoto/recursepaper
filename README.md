@@ -5,8 +5,8 @@ Recursive entity extraction per page allows users to familiarize themselves with
 
 [Example Video](https://github.com/user-attachments/assets/d4d732ae-3079-47fb-a104-276aeb50f7b9)
 
-Dependencies:
-- [Dandelion API] (https://dandelion.eu/) for entity extraction
-- Dear Py Gui
-- pickle
-- pymupdf
+### Dependencies:
+- [Dandelion API](https://dandelion.eu/) for entity extraction
+- [Dear Py Gui](https://github.com/hoffstadt/DearPyGui) for gui
+- [pickle](https://docs.python.org/3/library/pickle.html) for serialization
+- [pymupdf](https://github.com/pymupdf/PyMuPDF) for pdf manipulation
