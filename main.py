@@ -1,0 +1,167 @@
+import os
+from dataclasses import dataclass
+import pickle
+import requests
+import webbrowser
+import pymupdf
+import dearpygui.dearpygui as dpg
+
+# Recursive entity extraction??, extract entities from expanded abstracts in new window
+# TODO: Entity class, arxiv search, file system to organize all file types, llm integration, images from wikipedia?, tree visualization, pdf zooming, recursive serialization
+
+def dandelion_entity_extract(buffer):
+	entities = set()
+	refs = dict()
+
+	payload = {"text":buffer, "token":"351089bc13b94efaa05bea76eb1fdb43", "min_confidence":0.7, "include":"abstract"}
+	url = "https://api.dandelion.eu/datatxt/nex/v1"
+	response = requests.get(url, params=payload)
+	json = response.json()
+	try:
+		for x in json['annotations']:
+			entities.add((x['label']))
+			refs[x['label']]=(x['uri'], x['abstract'])
+	except  KeyError as e:
+		print("Key error", e)
+		print(json)
+
+	return (entities, refs)
+
+@dataclass
+class Entity:
+		name: str
+		abstract: str
+		url: str
+
+class Paper:
+	def __init__(self, filename, id_="x1"):
+		self.filename = filename
+		self.entity_filename = filename.split('.')[0] + ".entities"
+		self.entity_refs_filename = filename.split('.')[0] + ".erefs"
+		self.doc = pymupdf.open(filename)
+		self.id_ = id_
+		self.pages = self.doc.page_count
+		self.pn = 0
+
+		self.to_images()
+
+		if os.path.exists(self.entity_filename) and os.path.exists(self.entity_refs_filename):
+			print(f"Loading entities from {self.entity_filename} and {self.entity_refs_filename}...")
+			self.entities = pickle.load(open(self.entity_filename, 'rb'))
+			self.entity_refs = pickle.load(open(self.entity_refs_filename, 'rb'))
+		else:
+			print("Extracting entities...")
+			self.entities = [set() for _ in range(self.pages)]
+			self.entity_refs = [dict() for _ in range(self.pages)]
+			self.extract_entities()
+			print("Serializing entities...")
+			pickle.dump(self.entities, open(self.entity_filename, 'wb'))
+			pickle.dump(self.entity_refs, open(self.entity_refs_filename, 'wb'))
+
+	def init_texture(self):
+		width, height, _, data = dpg.load_image(f"{self.id_}:page-{self.pn}.png")
+		dpg.add_dynamic_texture(width=width, height=height, default_value=data, tag="texture_tag")
+
+	def update_texture(self):
+		_, _, _, data = dpg.load_image(f"{self.id_}:page-{self.pn}.png")
+		dpg.set_value("texture_tag", data)
+
+
+	def update_entities(self):
+		dpg.delete_item("entity_window", children_only=True)
+		Paper.build_entity_window(self.entities[self.pn], self.entity_refs[self.pn], "entity_window")
+
+	@staticmethod
+	def search_callback(sender, app_data, user_data):
+		dpg.set_value(user_data + "_filter_set", app_data)
+
+	@staticmethod
+	def clear_callback(sender, app_data, user_data):
+		dpg.set_value(f"{user_data}_filter_set", "")
+		dpg.set_value(f"{user_data}_search", "")
+
+	@staticmethod
+	def build_entity_window(entities, refs, parent, depth=0, found=None):
+		if found == None:
+			found = set(entities)
+		dpg.add_input_text(label="Search", tag=f"{parent}_search", parent=parent, callback=Paper.search_callback, user_data=parent)
+		dpg.add_button(label="clear search", parent=parent, callback=Paper.clear_callback, user_data=parent)
+		with dpg.filter_set(tag=f"{parent}_filter_set", parent=parent):
+			for entity in entities:
+				url, abstract = refs[entity]
+				with dpg.collapsing_header(label=entity, tag=f'{entity}_depth={depth}', filter_key=entity, parent=f"{parent}_filter_set"):
+					dpg.add_text(abstract, wrap=350)
+					dpg.add_button(label="Wiki page", callback=Paper.entity_callback, user_data=url)
+					dpg.add_button(label="Recurse entity extract", callback=Paper.recurse_extraction, user_data=(depth+1, entity, abstract, found))
+
+	@staticmethod
+	def recurse_extraction(sender, app_data, user_data):
+		depth, parent_entity, abstract, found = user_data
+		entities, refs = dandelion_entity_extract(abstract)
+		for e in found:
+			entities.discard(e)
+		found = found.union(entities)
+		dpg.add_window(label=parent_entity, tag=f"{parent_entity}_depth={depth}")
+
+		Paper.build_entity_window(entities, refs, f"{parent_entity}_depth={depth}", depth=depth+1, found=found)
+
+	@staticmethod
+	def entity_callback(sender, app_data, user_data):
+		webbrowser.open(user_data)
+
+	def down(self):
+		if self.pn < self.pages-1: self.pn += 1
+		self.update_texture()
+		self.update_entities()
+
+	def up(self):
+		if self.pn > 0: self.pn -= 1
+		self.update_texture()
+		self.update_entities()
+
+	def to_images(self):
+		for page in self.doc:
+			pmap = page.get_pixmap()
+			pmap.save(f"{self.id_}:page-{page.number}.png")
+	
+	def extract_entities(self):
+		pages = []
+		for page in self.doc:
+			text = page.get_text()
+			sb = []
+			if len(text) <= 3000:
+				sb.append(text)
+			else:
+				while len(text) > 3000:
+					sb.append(text[:3000])
+					text = text[3000:]
+			pages.append(sb)
+
+		for i, page in enumerate(pages):
+			for b in page:
+				entities, refs = dandelion_entity_extract(b)
+				self.entities[i] |= entities
+				self.entity_refs[i] |= refs
+
+
+dpg.create_context()
+paper = Paper("2409.15046v1.AlphaZip__Neural_Network_Enhanced_Lossless_Text_Compression.pdf")
+
+with dpg.texture_registry(show=True):
+	paper.init_texture()
+
+with dpg.window(label="Viewer", width=600, height=800):
+    dpg.add_image("texture_tag")
+
+with dpg.window(label="Entites", tag="entity_window", width=500, height=700, pos=[1000,50]):
+	paper.update_entities()
+
+with dpg.handler_registry():
+	dpg.add_key_press_handler(dpg.mvKey_J, callback=paper.down)
+	dpg.add_key_press_handler(dpg.mvKey_K, callback=paper.up)
+
+dpg.create_viewport(title='Recurse Paper', width=1600, height=800)
+dpg.setup_dearpygui()
+dpg.show_viewport()
+dpg.start_dearpygui()
+dpg.destroy_context()
