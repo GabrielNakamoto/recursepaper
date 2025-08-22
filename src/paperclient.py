@@ -1,0 +1,38 @@
+import glob
+import dearpygui.dearpygui as dpg
+from entity import Entity
+from paper import Paper 
+
+class PaperClient:
+	def __init__(self):
+		self.current_paper = None
+		self.selected_filename = None
+		with dpg.window(label="Paper client", tag="paper-client", width=400, height=100, pos=[625,50]):
+			dpg.add_text("Choose research paper:")
+			dpg.add_combo(items=glob.glob('../papers/*.pdf'), tag="paper-chooser", callback=self.choose_paper)
+			dpg.add_button(label="Load selected paper", callback=self.load_paper)
+
+		dpg.add_window(label="Viewer", tag="viewer_window", width=600, height=800)
+
+		with dpg.texture_registry():
+			dpg.add_dynamic_texture(width=612, height=792, tag="texture_tag", default_value=[])
+
+	def choose_paper(self, sender, app_data):
+		self.selected_filename = app_data.split('/')[-1]
+
+	def load_paper(self):
+		if self.selected_filename == None:
+			print("No paper currently selected")
+			return
+		if self.current_paper != None:
+			self.current_paper.save()
+
+		paper = Paper(self.selected_filename)
+		paper.update_entities()
+		paper.update_texture()
+		with dpg.handler_registry():
+			dpg.add_key_press_handler(dpg.mvKey_J, callback=paper.down)
+			dpg.add_key_press_handler(dpg.mvKey_K, callback=paper.up)
+		self.current_paper = paper
+		dpg.add_image("texture_tag", parent="viewer_window")
+
