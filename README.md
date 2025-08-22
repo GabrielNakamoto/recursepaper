@@ -1,7 +1,11 @@
 # Recurse Paper
 
 Hobby program intended to improve understanding while reading research papers.
-Recursive entity extraction per page allows users to familiarize themselves with technical terms, giving themselves more context with summaries and wikipedia links available at each depth.
+
+Academic and technical jargon is automatically detected and displayed with dropdown summaries for each page of the pdf along with corresponding wikipedia links for each term. 
+If you find yourself bogged down with the same jargon in those summaries you can descend another layer and provide yourself even more context.
+
+Detection is performed through [Dandelion](https://dandelion.eu/) [entity extraction](https://en.wikipedia.org/wiki/Named-entity_recognition) 
 
 [recursepaper-example.webm](https://github.com/user-attachments/assets/a2494cc7-9e36-4cdd-a682-bfa27cddd411)
 
