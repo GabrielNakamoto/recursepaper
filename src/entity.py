@@ -116,7 +116,7 @@ class Entity:
 			dpg.delete_item(self.wtag+self.suffix)
 			# hacky tag fix to give dpg time for cleanup
 			self.suffix += "x"
-			if self.suffix == "x" * 10: self.suffix = ""
+			# if self.suffix == "x" * 10: self.suffix = ""
 
 	def clear(self):
 		dpg.set_value(self.wtag+self.suffix+"_filter_set", "")
