@@ -23,6 +23,11 @@ class Paper:
 
 		for i in range(self.pages): self.save_pixmap(i)
 
+		if not os.path.exists(PAPER_PATH):
+			os.mkdir(PAPER_PATH)
+		if not os.path.exists(ENTITY_PATH):
+			os.mkdir(ENTITY_PATH)
+
 		if os.path.exists(self.entpath):
 			print(f"Loading entities from {self.entpath}...")
 			self.root_entities = pickle.load(open(self.entpath, 'rb'))
@@ -37,7 +42,7 @@ class Paper:
 	def update_texture(self):
 		filepath = os.path.join(self.img_dir, f"page-{self.pn}.png")
 		w, h, _, data = dpg.load_image(filepath)
-		print("Loaded pxmap:", filepath, f" {w} * {h}")
+		# print("Loaded pxmap:", filepath, f" {w} * {h}")
 
 		dpg.delete_item("viewer_window", children_only=True)
 		dpg.delete_item("texture_tag")
@@ -55,9 +60,8 @@ class Paper:
 		a = self.viewmat.a
 		b = self.viewmat.d
 
-		print("Old matrix:", self.viewmat)
 		self.viewmat = pymupdf.Matrix(a+(delta*0.1), b+(delta*0.1))
-		print("New matrix:", self.viewmat)
+
 		self.save_pixmap()
 		self.update_texture()
 
@@ -80,7 +84,7 @@ class Paper:
 		page = self.doc[pn]
 		pmap = page.get_pixmap(matrix=self.viewmat)
 		filepath = os.path.join(self.img_dir, f"page-{page.number}.png")
-		print("Saving pxmap to:", filepath)
+		# print("Saving pxmap to:", filepath)
 		pmap.save(filepath)
 	
 	def extract_entities(self):
@@ -118,7 +122,7 @@ class Paper:
 			r.close()
 
 	def save(self):
-		print(f"Requested entity cache to {self.entpath}...")
+		# print(f"Requested entity cache to {self.entpath}...")
 		pickle.dump(self.root_entities, open(self.entpath, 'wb'))
 
 

@@ -11,6 +11,7 @@ TODO:
 	[] entity images from wikipedia?
 	[] dandelion API configuration
 	[] better comments
+	[] progress bar for pdf downloads
 	[] improve arxiv client, check API docks
 	[X] pdf zooming: https://pymupdf.readthedocs.io/en/latest/recipes-images.html#how-to-increase-image-resolution 
 	[] pdf term highlighting: https://pymupdf.readthedocs.io/en/latest/page.html#Page.add_highlight_annot
