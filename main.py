@@ -38,14 +38,16 @@ class Entity:
 class Paper:
 	def __init__(self, filename, id_="x1"):
 		self.filename = filename
-		self.entity_filename = filename.split('.')[0] + ".entities"
-		self.entity_refs_filename = filename.split('.')[0] + ".erefs"
-		self.doc = pymupdf.open(filename)
+		self.filehead = ''.join(filename.split('.')[:-1])
+		self.img_dir = os.path.join('papers', self.filehead + '_imgs')
+		self.entity_filename = os.path.join("entities", self.filehead + ".entities")
+		self.entity_refs_filename = os.path.join("entities", self.filehead + ".erefs")
+		self.doc = pymupdf.open(os.path.join('papers', filename))
 		self.id_ = id_
 		self.pages = self.doc.page_count
 		self.pn = 0
 
-		self.to_images()
+		self.cache_images()
 
 		if os.path.exists(self.entity_filename) and os.path.exists(self.entity_refs_filename):
 			print(f"Loading entities from {self.entity_filename} and {self.entity_refs_filename}...")
@@ -61,11 +63,11 @@ class Paper:
 			pickle.dump(self.entity_refs, open(self.entity_refs_filename, 'wb'))
 
 	def init_texture(self):
-		width, height, _, data = dpg.load_image(f"{self.id_}:page-{self.pn}.png")
+		width, height, _, data = dpg.load_image(os.path.join(self.img_dir, f"page-{self.pn}.png"))
 		dpg.add_dynamic_texture(width=width, height=height, default_value=data, tag="texture_tag")
 
 	def update_texture(self):
-		_, _, _, data = dpg.load_image(f"{self.id_}:page-{self.pn}.png")
+		_, _, _, data = dpg.load_image(os.path.join(self.img_dir, f"page-{self.pn}.png"))
 		dpg.set_value("texture_tag", data)
 
 
@@ -121,10 +123,12 @@ class Paper:
 		self.update_texture()
 		self.update_entities()
 
-	def to_images(self):
-		for page in self.doc:
-			pmap = page.get_pixmap()
-			pmap.save(f"{self.id_}:page-{page.number}.png")
+	def cache_images(self):
+		if not os.path.exists(self.img_dir):
+			os.mkdir(self.img_dir)
+			for page in self.doc:
+				pmap = page.get_pixmap()
+				pmap.save(os.path.join(self.img_dir, f"page-{page.number}.png"))
 	
 	def extract_entities(self):
 		pages = []
@@ -149,7 +153,7 @@ class PaperClient:
 	def __init__(self):
 		self.current_paper = None
 		self.selected_filename = None
-		pdfs = 	glob.glob('*.pdf')
+		pdfs = 	glob.glob('papers/*.pdf')
 		with dpg.window(label="Paper client", tag="paper-client", width=400, height=100, pos=[625,50]):
 			dpg.add_text("Choose research paper:")
 			dpg.add_combo(items=pdfs, callback=self.choose_paper)
@@ -159,7 +163,7 @@ class PaperClient:
 		dpg.add_window(label="Entities", tag="entity_window", width=500, height=700, pos=[1050,50])
 
 	def choose_paper(self, sender, app_data):
-		self.selected_filename = app_data
+		self.selected_filename = app_data.split('/')[-1]
 
 	def load_paper(self):
 		if self.selected_filename == None:
@@ -200,24 +204,8 @@ class ArxivClient:
 		dpg.set_value("arxiv-result-status", f"Found {len(self.results)} papers")
 
 dpg.create_context()
-paper = Paper("2409.15046v1.AlphaZip__Neural_Network_Enhanced_Lossless_Text_Compression.pdf")
 pc = PaperClient()
 ac = ArxivClient()
-
-"""
-with dpg.texture_registry(show=True):
-	paper.init_texture()
-
-with dpg.window(label="Viewer", width=600, height=800):
-	dpg.add_image("texture_tag")
-
-with dpg.window(label="Entities", tag="entity_window", width=500, height=700, pos=[1050,50]):
-	paper.update_entities()
-
-with dpg.handler_registry():
-	dpg.add_key_press_handler(dpg.mvKey_J, callback=paper.down)
-	dpg.add_key_press_handler(dpg.mvKey_K, callback=paper.up)
-"""
 
 dpg.create_viewport(title='Recurse Paper', width=1600, height=800)
 dpg.setup_dearpygui()
