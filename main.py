@@ -62,14 +62,9 @@ class Paper:
 			pickle.dump(self.entities, open(self.entity_filename, 'wb'))
 			pickle.dump(self.entity_refs, open(self.entity_refs_filename, 'wb'))
 
-	def init_texture(self):
-		width, height, _, data = dpg.load_image(os.path.join(self.img_dir, f"page-{self.pn}.png"))
-		dpg.add_dynamic_texture(width=width, height=height, default_value=data, tag="texture_tag")
-
 	def update_texture(self):
 		_, _, _, data = dpg.load_image(os.path.join(self.img_dir, f"page-{self.pn}.png"))
 		dpg.set_value("texture_tag", data)
-
 
 	def update_entities(self):
 		dpg.delete_item("entity_window", children_only=True)
@@ -162,6 +157,9 @@ class PaperClient:
 		dpg.add_window(label="Viewer", tag="viewer_window", width=600, height=800)
 		dpg.add_window(label="Entities", tag="entity_window", width=500, height=700, pos=[1050,50])
 
+		with dpg.texture_registry():
+			dpg.add_dynamic_texture(width=612, height=792, tag="texture_tag", default_value=[])
+
 	def choose_paper(self, sender, app_data):
 		self.selected_filename = app_data.split('/')[-1]
 
@@ -169,10 +167,12 @@ class PaperClient:
 		if self.selected_filename == None:
 			print("No paper currently selected")
 			return
+
 		paper = Paper(self.selected_filename)
 		paper.update_entities()
-		with dpg.texture_registry():
-			paper.init_texture()
+		# with dpg.texture_registry():
+			# paper.init_texture()
+		paper.update_texture()
 		with dpg.handler_registry():
 			dpg.add_key_press_handler(dpg.mvKey_J, callback=paper.down)
 			dpg.add_key_press_handler(dpg.mvKey_K, callback=paper.up)
