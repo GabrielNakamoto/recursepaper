@@ -1,7 +1,9 @@
 import requests
+from dataclasses import dataclass
 import webbrowser
 import os
 import dearpygui.dearpygui as dpg
+
 
 class Entity:
 	def __init__(self, name, url, abstract, parent=None, found=None, depth=0, children=[]):
@@ -14,11 +16,27 @@ class Entity:
 		self.found = found
 		self.children = children
 		self.suffix = ""
-		self.wtag = f"{self.name}_depth={self.depth}"
+		self.wtag = f"ent:{self.name}_depth={self.depth}"
 
 		self.width = 500 - 50*depth
 		self.height = 700 - 50*depth
 		self.pos = [1050-20*depth,50+20*depth]
+
+	@staticmethod
+	def dandelion_status(response_headers):
+		used = float(response_headers['X-DL-units'])
+		total_used = used
+		remaining = float(response_headers['X-DL-units-left'])
+		reset = response_headers['X-DL-units-reset']
+
+		if dpg.does_item_exist("dandelion_status"):
+			total_used += float(dpg.get_value("dandelion_total").split(':')[-1])
+			dpg.delete_item("dandelion_status")
+		with dpg.window(label="Dandelion API Status", tag="dandelion_status"):
+			dpg.add_text(f"Tokens consumed: {used}")
+			dpg.add_text(f"Total tokens used: {total_used}", tag="dandelion_total")
+			dpg.add_text(f"Tokens remaining: {remaining}")
+			dpg.add_text("Next reset: "+reset)
 
 	@staticmethod
 	def dandelion_extract(buffer, parent, found=None, depth=1):
@@ -30,10 +48,7 @@ class Entity:
 		url = "https://api.dandelion.eu/datatxt/nex/v1"
 		response = requests.get(url, params=payload)
 
-		# TODO: dataclass to display token info to user?
-		print(f"Consumed {response.headers['X-DL-units']} tokens")
-		print("Remaining tokens: ", response.headers['X-DL-units-left'])
-		print("Token reset:", response.headers['X-DL-units-reset'])
+		Entity.dandelion_status(response.headers)
 
 		json = response.json()
 		try:
@@ -81,6 +96,7 @@ class Entity:
 			with dpg.filter_set(tag=self.wtag+self.suffix+"_filter_set"):
 				for e in self.children:
 					e.render_summary()
+					if e.cached(): e.render_child_layer()
 
 	def render_summary(self):
 		with dpg.collapsing_header(
@@ -108,6 +124,9 @@ class Entity:
 
 	def search(self, sender, app_data):
 		dpg.set_value(self.wtag+self.suffix+"_filter_set", app_data)
+
+	def cached(self):
+		return len(self.children)
 
 	def expand(self):
 		print(f"Expanding entity: {self.name}, wtag: {self.wtag}")

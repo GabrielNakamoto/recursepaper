@@ -11,6 +11,7 @@ class PaperClient:
 	def __init__(self):
 		self.current_paper = None
 		self.selected_filename = None
+
 		with dpg.window(label="Paper client", tag="paper-client", width=400, height=100, pos=[625,50]):
 			dpg.add_text("Choose research paper:")
 			dpg.add_combo(items=glob.glob(os.path.join(PAPER_PATH, '*.pdf')), tag="paper-chooser", callback=self.choose_paper)
