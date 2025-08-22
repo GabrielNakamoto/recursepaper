@@ -1,4 +1,5 @@
 import os
+import glob
 from dataclasses import dataclass
 import pickle
 import requests
@@ -144,40 +145,79 @@ class Paper:
 				self.entities[i] |= entities
 				self.entity_refs[i] |= refs
 
+class PaperClient:
+	def __init__(self):
+		self.current_paper = None
+		self.selected_filename = None
+		pdfs = 	glob.glob('*.pdf')
+		with dpg.window(label="Paper client", tag="paper-client", width=400, height=100, pos=[625,50]):
+			dpg.add_text("Choose research paper:")
+			dpg.add_combo(items=pdfs, callback=self.choose_paper)
+			dpg.add_button(label="Load selected paper", callback=self.load_paper)
+
+		dpg.add_window(label="Viewer", tag="viewer_window", width=600, height=800)
+		dpg.add_window(label="Entities", tag="entity_window", width=500, height=700, pos=[1050,50])
+
+	def choose_paper(self, sender, app_data):
+		self.selected_filename = app_data
+
+	def load_paper(self):
+		if self.selected_filename == None:
+			print("No paper currently selected")
+			return
+		paper = Paper(self.selected_filename)
+		paper.update_entities()
+		with dpg.texture_registry():
+			paper.init_texture()
+		with dpg.handler_registry():
+			dpg.add_key_press_handler(dpg.mvKey_J, callback=paper.down)
+			dpg.add_key_press_handler(dpg.mvKey_K, callback=paper.up)
+		self.current_paper = paper
+		dpg.add_image("texture_tag", parent="viewer_window")
+
 class ArxivClient:
 	def __init__(self):
 		self.inner = arxiv.Client()
-		with dpg.window(label="Arxiv Search", tag="arxiv-search", width=400, height=500, pos=[600,100]):
+		self.results = []
+		with dpg.window(label="Arxiv Search", tag="arxiv-search", width=400, height=500, pos=[625,200]):
 			dpg.add_input_text(label="Paper Title", tag="arxiv-title")
 			dpg.add_input_text(label="Category", tag="arxiv-cat")
 			dpg.add_button(label="Search", callback=self.search)
 			dpg.add_separator()
 			dpg.add_text("Results:")
+			dpg.add_text("", tag="arxiv-result-status")
 
 	def search(self):
 		title = dpg.get_value("arxiv-title")
 		cat = dpg.get_value("arxiv-cat")
+		for x in self.results:
+			dpg.delete_item(x)
+		self.results = []
 		for r in self.inner.results(arxiv.Search(query=f'ti:{title}+AND+cat:{cat}', max_results=5)):
-			dpg.add_text(r.title, parent="arxiv-search")
-
+			self.results.append(r.title)
+			dpg.add_button(label=r.title, tag=r.title, parent="arxiv-search", callback=lambda a, b, c: c.download_pdf(), user_data=r)
+			# dpg.add_text(r.title, parent="arxiv-search")
+		dpg.set_value("arxiv-result-status", f"Found {len(self.results)} papers")
 
 dpg.create_context()
 paper = Paper("2409.15046v1.AlphaZip__Neural_Network_Enhanced_Lossless_Text_Compression.pdf")
-
+pc = PaperClient()
 ac = ArxivClient()
 
+"""
 with dpg.texture_registry(show=True):
 	paper.init_texture()
 
 with dpg.window(label="Viewer", width=600, height=800):
-    dpg.add_image("texture_tag")
+	dpg.add_image("texture_tag")
 
-with dpg.window(label="Entites", tag="entity_window", width=500, height=700, pos=[1000,50]):
+with dpg.window(label="Entities", tag="entity_window", width=500, height=700, pos=[1050,50]):
 	paper.update_entities()
 
 with dpg.handler_registry():
 	dpg.add_key_press_handler(dpg.mvKey_J, callback=paper.down)
 	dpg.add_key_press_handler(dpg.mvKey_K, callback=paper.up)
+"""
 
 dpg.create_viewport(title='Recurse Paper', width=1600, height=800)
 dpg.setup_dearpygui()
