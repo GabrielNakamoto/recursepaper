@@ -5,6 +5,7 @@ import requests
 import webbrowser
 import pymupdf
 import dearpygui.dearpygui as dpg
+import arxiv
 
 # Recursive entity extraction??, extract entities from expanded abstracts in new window
 # TODO: Entity class, arxiv search, file system to organize all file types, llm integration, images from wikipedia?, tree visualization, pdf zooming, recursive serialization
@@ -13,7 +14,7 @@ def dandelion_entity_extract(buffer):
 	entities = set()
 	refs = dict()
 
-	payload = {"text":buffer, "token":"351089bc13b94efaa05bea76eb1fdb43", "min_confidence":0.7, "include":"abstract"}
+	payload = {"text":buffer, "token":os.environ['DAND_TOKEN'], "min_confidence":0.7, "include":"abstract"}
 	url = "https://api.dandelion.eu/datatxt/nex/v1"
 	response = requests.get(url, params=payload)
 	json = response.json()
@@ -143,9 +144,27 @@ class Paper:
 				self.entities[i] |= entities
 				self.entity_refs[i] |= refs
 
+class ArxivClient:
+	def __init__(self):
+		self.inner = arxiv.Client()
+		with dpg.window(label="Arxiv Search", tag="arxiv-search", width=400, height=500, pos=[600,100]):
+			dpg.add_input_text(label="Paper Title", tag="arxiv-title")
+			dpg.add_input_text(label="Category", tag="arxiv-cat")
+			dpg.add_button(label="Search", callback=self.search)
+			dpg.add_separator()
+			dpg.add_text("Results:")
+
+	def search(self):
+		title = dpg.get_value("arxiv-title")
+		cat = dpg.get_value("arxiv-cat")
+		for r in self.inner.results(arxiv.Search(query=f'ti:{title}+AND+cat:{cat}', max_results=5)):
+			dpg.add_text(r.title, parent="arxiv-search")
+
 
 dpg.create_context()
 paper = Paper("2409.15046v1.AlphaZip__Neural_Network_Enhanced_Lossless_Text_Compression.pdf")
+
+ac = ArxivClient()
 
 with dpg.texture_registry(show=True):
 	paper.init_texture()
