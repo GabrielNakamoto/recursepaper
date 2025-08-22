@@ -8,7 +8,7 @@ import pymupdf
 import dearpygui.dearpygui as dpg
 import arxiv
 
-# TODO: llm integration, images from wikipedia?, tree visualization, pdf zooming
+# TODO: images from wikipedia?, tree visualization, pdf zooming
 
 def dandelion_entity_extract(buffer, parent, found=None, depth=1):
 	print("Dandelion API call from parent:", parent)
@@ -77,7 +77,7 @@ class Entity:
 		with dpg.window(label=self.name, tag=self.wtag, width=self.width, height=self.height, pos=self.pos):
 			dpg.add_input_text(label="Search", tag=f"{self.name}_depth={self.depth}_search", callback=self.search)
 			dpg.add_button(label="clear search", callback=self.clear)
-			with dpg.filter_set(tag=f"{self.name}_depth={self.depth}_filter_set"):
+			with dpg.filter_set(tag=self.wtag +"_filter_set"):
 				for e in self.children:
 					e.render_summary()
 
@@ -93,11 +93,11 @@ class Entity:
 			dpg.add_button(label="Recurse entity extract", callback=self.expand)
 
 	def clear(self):
-		dpg.set_value(f"{self.name}_depth={self.depth}_filter_set", "")
-		dpg.set_value(f"{self.name}_depth={self.depth}_search", "")
+		dpg.set_value(self.wtag + "_filter_set", "")
+		dpg.set_value(self.wtag + "_search", "")
 
 	def search(self, sender, app_data):
-		dpg.set_value(self.name + "_filter_set", app_data)
+		dpg.set_value(self.wtag + "_filter_set", app_data)
 
 	def expand(self):
 		print(f"Expanding entity: {self.name}, wtag: {self.wtag}")
@@ -165,6 +165,7 @@ class Paper:
 	
 	def extract_entities(self):
 		pages = []
+		buffers = 0.0
 		for page in self.doc:
 			text = page.get_text()
 			sb = []
@@ -174,14 +175,22 @@ class Paper:
 				while len(text) > 3000:
 					sb.append(text[:3000])
 					text = text[3000:]
+			buffers += len(sb)
 			pages.append(sb)
-
+		
+		with dpg.window(label="Paper Load Progress", tag="pbar_window", width=300, height=10, pos=[1300,0]):
+			dpg.add_progress_bar(tag="pbar", default_value=0.0, width=250, indent=25)
+		j = 0.0
 		for i, page in enumerate(pages):
 			children = []
-			for b in page: children += dandelion_entity_extract(b, f"Page-{i} Root Entity")
+			for b in page:
+				j += 1.0
+				children += dandelion_entity_extract(b, f"Page-{i} Root Entity")
+				dpg.set_value("pbar", j / buffers)
 			root = Entity(f"Page-{i} Root Entity", "", "", children=children)
 			root.propogate_paper_ptr(self)
 			self.root_entities.append(root)
+		dpg.delete_item("pbar_window")
 
 	def save(self):
 		print(f"Requested entity cache to {self.entpath}...")
@@ -249,12 +258,18 @@ class ArxivClient:
 		user_data.download_pdf(dirpath='./papers')
 		dpg.configure_item("paper-chooser", items=glob.glob('papers/*.pdf'))
 
-dpg.create_context()
-pc = PaperClient()
-ac = ArxivClient()
+def main():
+	dpg.create_context()
 
-dpg.create_viewport(title='Recurse Paper', width=1600, height=800)
-dpg.setup_dearpygui()
-dpg.show_viewport()
-dpg.start_dearpygui()
-dpg.destroy_context()
+	PaperClient()
+	ArxivClient()
+
+	dpg.create_viewport(title='Recurse Paper', width=1600, height=800)
+	dpg.setup_dearpygui()
+	dpg.show_viewport()
+	dpg.start_dearpygui()
+	dpg.destroy_context()
+
+
+if __name__ == "__main__":
+    main()
