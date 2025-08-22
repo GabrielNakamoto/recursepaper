@@ -13,7 +13,7 @@ Recursive entity extraction per page allows users to familiarize themselves with
   pip install dearpygui requests pymupdf arxiv
   git clone https://github.com/GabrielNakamoto/recursepaper
   cd recursepaper
-  python3 main.py
+  python3 src/main.py
   ```
 
 The file system consists of an entities and papers directory, the papers directory stores downloaded pdfs from the arxiv client however you can use your own paper pdfs too.
