@@ -17,9 +17,9 @@ class PaperClient:
 			dpg.add_button(label="Load selected paper", callback=self.load_paper)
 
 		dpg.add_window(label="Viewer", tag="viewer_window", width=600, height=800)
-
 		with dpg.texture_registry():
-			dpg.add_dynamic_texture(width=612, height=792, tag="texture_tag", default_value=[])
+			dpg.add_raw_texture(width=612, height=794, tag="texture_tag", default_value=[])
+			dpg.add_image("texture_tag", parent="viewer_window")
 
 	def choose_paper(self, sender, app_data):
 		self.selected_filename = app_data.split('/')[-1]
@@ -34,9 +34,11 @@ class PaperClient:
 		paper = Paper(self.selected_filename)
 		paper.update_entities()
 		paper.update_texture()
+
 		with dpg.handler_registry():
 			dpg.add_key_press_handler(dpg.mvKey_J, callback=paper.down)
 			dpg.add_key_press_handler(dpg.mvKey_K, callback=paper.up)
+			dpg.add_key_press_handler(ord('='), callback=paper.zoom_in)
+			dpg.add_key_press_handler(ord('-'), callback=paper.zoom_out)
 		self.current_paper = paper
-		dpg.add_image("texture_tag", parent="viewer_window")
 

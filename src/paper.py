@@ -9,20 +9,19 @@ PAPER_PATH = path.abspath(path.join(path.dirname(__file__), os.pardir, 'papers')
 ENTITY_PATH = path.abspath(path.join(path.dirname(__file__), os.pardir, 'entities'))
 
 class Paper:
-	def __init__(self, filename, id_="x1"):
+	def __init__(self, filename):
 		self.filename = filename
 		self.filehead = ''.join(filename.split('.')[:-1])
 		self.img_dir = os.path.join(PAPER_PATH, self.filehead + '_imgs')
 		self.entpath = os.path.join(ENTITY_PATH, self.filehead + ".entities")
 		self.doc = pymupdf.open(os.path.join(PAPER_PATH, filename))
-		self.id_ = id_
 		self.pages = self.doc.page_count
 		self.pn = 0
+		self.viewmat = pymupdf.Matrix(1.0,  1.0)
 
 		self.root_entities = []
 
-		if not os.path.exists(self.img_dir):
-			self.cache_images()
+		for i in range(self.pages): self.save_pixmap(i)
 
 		if os.path.exists(self.entpath):
 			print(f"Loading entities from {self.entpath}...")
@@ -36,31 +35,64 @@ class Paper:
 			pickle.dump(self.root_entities, open(self.entpath, 'wb'))
 
 	def update_texture(self):
-		_, _, _, data = dpg.load_image(os.path.join(self.img_dir, f"page-{self.pn}.png"))
-		dpg.set_value("texture_tag", data)
+		filepath = os.path.join(self.img_dir, f"page-{self.pn}.png")
+		w, h, _, data = dpg.load_image(filepath)
+		print("Loaded pxmap:", filepath, f" {w} * {h}")
+
+		dpg.delete_item("viewer_window", children_only=True)
+		dpg.delete_item("texture_tag")
+		with dpg.texture_registry():
+			dpg.add_raw_texture(width=w, height=h, tag="texture_tag", default_value=data)
+			dpg.add_image("texture_tag", parent="viewer_window")
+		dpg.configure_item("viewer_window", width=w, height=h)
 
 	def update_entities(self, lpn=None):
 		if lpn != None: dpg.delete_item(self.root_entities[lpn].wtag)
 		self.root_entities[self.pn].render_child_layer()
 
+	def zoom_in(self):
+		a = self.viewmat.a
+		b = self.viewmat.d
+
+		print("Old matrix:", self.viewmat)
+		self.viewmat = pymupdf.Matrix(a+0.1, b+0.1)
+		print("New matrix:", self.viewmat)
+		self.save_pixmap()
+		self.update_texture()
+
+	def zoom_out(self):
+		a = self.viewmat.a
+		b = self.viewmat.d
+
+		print("Old matrix:", self.viewmat)
+		self.viewmat = pymupdf.Matrix(a-0.1, b-0.1)
+		print("New matrix:", self.viewmat)
+		self.save_pixmap()
+		self.update_texture()
+
 	def down(self):
 		lpn = self.pn
 		if self.pn < self.pages-1: self.pn += 1
+		self.save_pixmap()
 		self.update_texture()
 		self.update_entities(lpn)
 
 	def up(self):
 		lpn = self.pn
 		if self.pn > 0: self.pn -= 1
+		self.save_pixmap()
 		self.update_texture()
 		self.update_entities(lpn)
 
-	def cache_images(self):
+	def save_pixmap(self, pn=None):
+		if pn == None: pn = self.pn
 		if not os.path.exists(self.img_dir):
 			os.mkdir(self.img_dir)
-			for page in self.doc:
-				pmap = page.get_pixmap()
-				pmap.save(os.path.join(self.img_dir, f"page-{page.number}.png"))
+		page = self.doc[pn]
+		pmap = page.get_pixmap(matrix=self.viewmat)
+		filepath = os.path.join(self.img_dir, f"page-{page.number}.png")
+		print("Saving pxmap to:", filepath)
+		pmap.save(filepath)
 	
 	def extract_entities(self):
 		pages = []

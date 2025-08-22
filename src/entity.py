@@ -28,6 +28,12 @@ class Entity:
 		payload = {"text":buffer, "token":os.environ['DAND_TOKEN'], "min_confidence":0.7, "include":"abstract"}
 		url = "https://api.dandelion.eu/datatxt/nex/v1"
 		response = requests.get(url, params=payload)
+
+		# TODO: dataclass to display token info to user?
+		print(f"Consumed {response.headers['X-DL-units']} tokens")
+		print("Remaining tokens: ", response.headers['X-DL-units-left'])
+		print("Token reset:", response.headers['X-DL-units-reset'])
+
 		json = response.json()
 		try:
 			for x in json['annotations']:
