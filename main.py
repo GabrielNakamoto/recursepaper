@@ -8,13 +8,9 @@ import pymupdf
 import dearpygui.dearpygui as dpg
 import arxiv
 
-# Recursive entity extraction??, extract entities from expanded abstracts in new window
-# TODO: Entity class, arxiv search, file system to organize all file types, llm integration, images from wikipedia?, tree visualization, pdf zooming, recursive serialization
+# TODO: llm integration, images from wikipedia?, tree visualization, pdf zooming
 
-
-# serialize paper when opening a new one or closing the whole application
-
-def dandelion_entity_extract(buffer, parent, found=None, depth=0):
+def dandelion_entity_extract(buffer, parent, found=None, depth=1):
 	print("Dandelion API call from parent:", parent)
 	entities = set()
 	refs = dict()
@@ -32,15 +28,16 @@ def dandelion_entity_extract(buffer, parent, found=None, depth=0):
 		print(json)
 
 	if found != None:
-		for e in found:
-			entities.discard(e)
+		for e in found: entities.discard(e)
 		found |= entities
+	else:
+		found = entities
 
 	return [Entity(e, refs[e][0], refs[e][1], parent, found=found, depth=depth) for e in entities]
 
 class Entity:
-	def __init__(self, name, url, abstract, paper=None, parent=None, found=None, depth=0, children=None):
-		self.paper = paper if paper else parent.paper
+	def __init__(self, name, url, abstract, parent=None, found=None, depth=0, children=None):
+		self.paper = None
 		self.name = name
 		self.abstract = abstract
 		self.url = url
@@ -49,6 +46,10 @@ class Entity:
 		self.found = found
 		self.children = children
 		self.wtag = f"{self.name}_depth={self.depth}"
+
+		self.width = 500 - 50*depth
+		self.height = 700 - 50*depth
+		self.pos = [1050-20*depth,50+20*depth]
 
 	def __getstate__(self):
 		state = {
@@ -73,7 +74,7 @@ class Entity:
 			c.propogate_paper_ptr(paper)
 
 	def render_child_layer(self):
-		with dpg.window(label=self.name, tag=self.wtag):
+		with dpg.window(label=self.name, tag=self.wtag, width=self.width, height=self.height, pos=self.pos):
 			dpg.add_input_text(label="Search", tag=f"{self.name}_depth={self.depth}_search", callback=self.search)
 			dpg.add_button(label="clear search", callback=self.clear)
 			with dpg.filter_set(tag=f"{self.name}_depth={self.depth}_filter_set"):
@@ -102,6 +103,7 @@ class Entity:
 		print(f"Expanding entity: {self.name}, wtag: {self.wtag}")
 		if self.children == None:
 			self.children = dandelion_entity_extract(self.abstract, self.name, found=self.found, depth=self.depth+1)
+			self.propogate_paper_ptr(self.paper)
 			# request serialization from top level paper
 			self.paper.save()
 		self.render_child_layer()
@@ -139,8 +141,7 @@ class Paper:
 		dpg.set_value("texture_tag", data)
 
 	def update_entities(self, lpn=None):
-		if lpn != None:
-			dpg.delete_item(self.root_entities[lpn].wtag)
+		if lpn != None: dpg.delete_item(self.root_entities[lpn].wtag)
 		self.root_entities[self.pn].render_child_layer()
 
 	def down(self):
@@ -178,7 +179,9 @@ class Paper:
 		for i, page in enumerate(pages):
 			children = []
 			for b in page: children += dandelion_entity_extract(b, f"Page-{i} Root Entity")
-			self.root_entities.append(Entity(f"Page-{i} Root Entity", "", "", children=children, paper=self))
+			root = Entity(f"Page-{i} Root Entity", "", "", children=children)
+			root.propogate_paper_ptr(self)
+			self.root_entities.append(root)
 
 	def save(self):
 		print(f"Requested entity cache to {self.entpath}...")
