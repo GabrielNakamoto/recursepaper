@@ -47,39 +47,28 @@ class Paper:
 		dpg.configure_item("viewer_window", width=w, height=h)
 
 	def update_entities(self, lpn=None):
-		if lpn != None: dpg.delete_item(self.root_entities[lpn].wtag)
+		if lpn != None:
+			self.root_entities[lpn].close()
 		self.root_entities[self.pn].render_child_layer()
 
-	def zoom_in(self):
+	def base_zoom(self, sender, app_data, delta):
 		a = self.viewmat.a
 		b = self.viewmat.d
 
 		print("Old matrix:", self.viewmat)
-		self.viewmat = pymupdf.Matrix(a+0.1, b+0.1)
+		self.viewmat = pymupdf.Matrix(a+(delta*0.1), b+(delta*0.1))
 		print("New matrix:", self.viewmat)
 		self.save_pixmap()
 		self.update_texture()
 
-	def zoom_out(self):
-		a = self.viewmat.a
-		b = self.viewmat.d
-
-		print("Old matrix:", self.viewmat)
-		self.viewmat = pymupdf.Matrix(a-0.1, b-0.1)
-		print("New matrix:", self.viewmat)
-		self.save_pixmap()
-		self.update_texture()
-
-	def down(self):
+	def base_move(self, sender, app_data, delta):
 		lpn = self.pn
-		if self.pn < self.pages-1: self.pn += 1
-		self.save_pixmap()
-		self.update_texture()
-		self.update_entities(lpn)
+		
+		if delta: # move down
+			if self.pn < self.pages-1: self.pn += 1
+		else: # move up
+			if self.pn > 0: self.pn -= 1
 
-	def up(self):
-		lpn = self.pn
-		if self.pn > 0: self.pn -= 1
 		self.save_pixmap()
 		self.update_texture()
 		self.update_entities(lpn)
@@ -122,6 +111,11 @@ class Paper:
 			root.propogate_paper_ptr(self)
 			self.root_entities.append(root)
 		dpg.delete_item("pbar_window")
+
+	def close(self):
+		# propogate window closes through entity tree
+		for r in self.root_entities:
+			r.close()
 
 	def save(self):
 		print(f"Requested entity cache to {self.entpath}...")

@@ -4,7 +4,7 @@ import os
 import dearpygui.dearpygui as dpg
 
 class Entity:
-	def __init__(self, name, url, abstract, parent=None, found=None, depth=0, children=None):
+	def __init__(self, name, url, abstract, parent=None, found=None, depth=0, children=[]):
 		self.paper = None
 		self.name = name
 		self.abstract = abstract
@@ -13,6 +13,7 @@ class Entity:
 		self.depth = depth
 		self.found = found
 		self.children = children
+		self.suffix = ""
 		self.wtag = f"{self.name}_depth={self.depth}"
 
 		self.width = 500 - 50*depth
@@ -68,41 +69,50 @@ class Entity:
 
 	def propogate_paper_ptr(self, paper):
 		self.paper = paper
-		if self.children == None:
+		if len(self.children) == 0:
 			return
 		for c in self.children:
 			c.propogate_paper_ptr(paper)
 
 	def render_child_layer(self):
-		with dpg.window(label=self.name, tag=self.wtag, width=self.width, height=self.height, pos=self.pos):
-			dpg.add_input_text(label="Search", tag=f"{self.name}_depth={self.depth}_search", callback=self.search)
+		with dpg.window(label=self.name, tag=self.wtag+self.suffix, width=self.width, height=self.height, pos=self.pos):
+			dpg.add_input_text(label="Search", tag=self.wtag+self.suffix+"_search", callback=self.search)
 			dpg.add_button(label="clear search", callback=self.clear)
-			with dpg.filter_set(tag=self.wtag +"_filter_set"):
+			with dpg.filter_set(tag=self.wtag+self.suffix+"_filter_set"):
 				for e in self.children:
 					e.render_summary()
 
 	def render_summary(self):
 		with dpg.collapsing_header(
 			label=self.name,
-			tag=self.wtag + "_summary",
 			filter_key=self.name,
-			parent=f"{self.parent}_depth={self.depth-1}_filter_set"
+			parent=self.parent
 		):
 			dpg.add_text(self.abstract, wrap=350)
 			dpg.add_button(label="Wiki page", callback=self.clicked)
 			dpg.add_button(label="Recurse entity extract", callback=self.expand)
 
+	def close(self):
+		#  close children first
+		for e in self.children:
+			e.close()
+		if dpg.does_item_exist(self.wtag+self.suffix):
+			dpg.delete_item(self.wtag+self.suffix)
+			# hacky tag fix to give dpg time for cleanup
+			self.suffix += "x"
+			if self.suffix == "x" * 10: self.suffix = ""
+
 	def clear(self):
-		dpg.set_value(self.wtag + "_filter_set", "")
-		dpg.set_value(self.wtag + "_search", "")
+		dpg.set_value(self.wtag+self.suffix+"_filter_set", "")
+		dpg.set_value(self.wtag+self.suffix+"_search", "")
 
 	def search(self, sender, app_data):
-		dpg.set_value(self.wtag + "_filter_set", app_data)
+		dpg.set_value(self.wtag+self.suffix+"_filter_set", app_data)
 
 	def expand(self):
 		print(f"Expanding entity: {self.name}, wtag: {self.wtag}")
-		if self.children == None:
-			self.children = Entity.dandelion_extract(self.abstract, self.name, found=self.found, depth=self.depth+1)
+		if len(self.children) == 0:
+			self.children = Entity.dandelion_extract(self.abstract, self.wtag+self.suffix, found=self.found, depth=self.depth+1)
 			self.propogate_paper_ptr(self.paper)
 			# request serialization from top level paper
 			self.paper.save()

@@ -30,15 +30,16 @@ class PaperClient:
 			return
 		if self.current_paper != None:
 			self.current_paper.save()
+			self.current_paper.close()
 
 		paper = Paper(self.selected_filename)
 		paper.update_entities()
 		paper.update_texture()
 
 		with dpg.handler_registry():
-			dpg.add_key_press_handler(dpg.mvKey_J, callback=paper.down)
-			dpg.add_key_press_handler(dpg.mvKey_K, callback=paper.up)
-			dpg.add_key_press_handler(ord('='), callback=paper.zoom_in)
-			dpg.add_key_press_handler(ord('-'), callback=paper.zoom_out)
+			dpg.add_key_press_handler(dpg.mvKey_J, callback=paper.base_move, user_data=1)
+			dpg.add_key_press_handler(dpg.mvKey_K, callback=paper.base_move, user_data=0)
+			dpg.add_key_press_handler(ord('='), callback=paper.base_zoom, user_data=1.0)
+			dpg.add_key_press_handler(ord('-'), callback=paper.base_zoom, user_data=-1.0)
 		self.current_paper = paper
 
