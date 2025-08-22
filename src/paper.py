@@ -1,11 +1,12 @@
-import os
 import pymupdf
 from entity import Entity
 import dearpygui.dearpygui as dpg
 import pickle
+import os
+import os.path as path
 
-PAPER_PATH = '../papers'
-ENTITY_PATH = '../entities'
+PAPER_PATH = path.abspath(path.join(path.dirname(__file__), os.pardir, 'papers'))
+ENTITY_PATH = path.abspath(path.join(path.dirname(__file__), os.pardir, 'entities'))
 
 class Paper:
 	def __init__(self, filename, id_="x1"):

@@ -1,6 +1,10 @@
 import glob
+import os
+import os.path as path
 import arxiv
 import dearpygui.dearpygui as dpg
+
+PAPER_PATH = path.abspath(path.join(path.dirname(__file__), os.pardir, 'papers'))
 
 class ArxivClient:
 	def __init__(self):
@@ -28,5 +32,5 @@ class ArxivClient:
 
 	def button_callback(self, sender, app_data, user_data):
 		user_data.download_pdf(dirpath='./papers')
-		dpg.configure_item("paper-chooser", items=glob.glob('../papers/*.pdf'))
+		dpg.configure_item("paper-chooser", items=glob.glob(os.path.join(PAPER_PATH, '*.pdf')))
 
