@@ -25,15 +25,21 @@ class PaperClient:
 	def choose_paper(self, sender, app_data):
 		self.selected_filename = app_data.split('/')[-1]
 
+	def cancel_choice(self):
+		self.selected_filename = None
+		self.current_paper = None
+
 	def load_paper(self):
 		if self.selected_filename == None:
 			print("No paper currently selected")
 			return
+		dpg.set_value("paper-chooser", "")
+
 		if self.current_paper != None:
 			self.current_paper.save()
 			self.current_paper.close()
 
-		paper = Paper(self.selected_filename)
+		paper = Paper(self.selected_filename, self.cancel_choice)
 		paper.update_entities()
 		paper.update_texture()
 

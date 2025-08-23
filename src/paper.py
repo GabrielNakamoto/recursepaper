@@ -9,7 +9,8 @@ PAPER_PATH = path.abspath(path.join(path.dirname(__file__), os.pardir, 'papers')
 ENTITY_PATH = path.abspath(path.join(path.dirname(__file__), os.pardir, 'entities'))
 
 class Paper:
-	def __init__(self, filename):
+	def __init__(self, filename, cancel_callback):
+		self.cancel_callback = cancel_callback
 		self.filename = filename
 		self.filehead = ''.join(filename.split('.')[:-1])
 		self.img_dir = os.path.join(PAPER_PATH, self.filehead + '_imgs')
@@ -34,10 +35,12 @@ class Paper:
 			for e in self.root_entities:
 				e.propogate_paper_ptr(self)
 		else:
-			print("Extracting entities...")
-			self.extract_entities()
-			print("Serializing entities...")
-			pickle.dump(self.root_entities, open(self.entpath, 'wb'))
+			_, nbuffers = self.bufferize()
+
+			with dpg.window(label="Paper Load API Confirmation", tag="api-confirm"):
+				dpg.add_text(f"Paper will require {nbuffers} API tokens")
+				dpg.add_button(label="Confirm", callback=self.extract_entities)
+				dpg.add_button(label="Cancel", callback=self.close)
 
 	def update_texture(self):
 		filepath = os.path.join(self.img_dir, f"page-{self.pn}.png")
@@ -52,6 +55,7 @@ class Paper:
 		dpg.configure_item("viewer_window", width=w, height=h)
 
 	def update_entities(self, lpn=None):
+		if len(self.root_entities) == 0: return
 		if lpn != None:
 			self.root_entities[lpn].close()
 		self.root_entities[self.pn].render_child_layer()
@@ -86,8 +90,8 @@ class Paper:
 		filepath = os.path.join(self.img_dir, f"page-{page.number}.png")
 		# print("Saving pxmap to:", filepath)
 		pmap.save(filepath)
-	
-	def extract_entities(self):
+
+	def bufferize(self):
 		pages = []
 		buffers = 0.0
 		for page in self.doc:
@@ -101,7 +105,17 @@ class Paper:
 					text = text[3000:]
 			buffers += len(sb)
 			pages.append(sb)
-		
+
+		return (pages, buffers)
+
+	def loaded(self):
+		return len(self.root_entities)
+	
+	def extract_entities(self):
+		dpg.delete_item("api-confirm")
+
+		pages, buffers = self.bufferize()
+
 		with dpg.window(label="Paper Load Progress", tag="pbar_window", width=300, height=10, pos=[1300,0]):
 			dpg.add_progress_bar(tag="pbar", default_value=0.0, width=250, indent=25)
 		j = 0.0
@@ -116,13 +130,23 @@ class Paper:
 			self.root_entities.append(root)
 		dpg.delete_item("pbar_window")
 
+		print("Serializing entities...")
+		pickle.dump(self.root_entities, open(self.entpath, 'wb'))
+
+		self.update_entities()
+
 	def close(self):
+		if dpg.does_item_exist("api-confirm"):
+			dpg.delete_item("api-confirm")
+			self.cancel_callback()
+		dpg.delete_item("viewer_window", children_only=True)
+		dpg.delete_item("texture_tag")
 		# propogate window closes through entity tree
 		for r in self.root_entities:
 			r.close()
 
 	def save(self):
-		# print(f"Requested entity cache to {self.entpath}...")
+		print(f"Requested entity cache to {self.entpath}...")
 		pickle.dump(self.root_entities, open(self.entpath, 'wb'))
 
 

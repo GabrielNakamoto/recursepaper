@@ -15,6 +15,9 @@ TODO:
 	[] improve arxiv client, check API docks
 	[X] pdf zooming: https://pymupdf.readthedocs.io/en/latest/recipes-images.html#how-to-increase-image-resolution 
 	[] pdf term highlighting: https://pymupdf.readthedocs.io/en/latest/page.html#Page.add_highlight_annot
+
+
+	[] api token usage confirmation
 """
 
 def main():
