@@ -28,4 +28,5 @@ Any entity extraction that is performed on a paper will be cached recursively an
 - pdf scaling with `-` and `=`
 
 ## Example video
-[recursepaper-example.webm](https://github.com/user-attachments/assets/a2494cc7-9e36-4cdd-a682-bfa27cddd411)
+https://github.com/user-attachments/assets/e20d4d07-a2aa-4666-a07d-0f7fee587e90
+
