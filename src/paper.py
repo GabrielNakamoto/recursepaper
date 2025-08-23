@@ -42,6 +42,22 @@ class Paper:
 				dpg.add_button(label="Confirm", callback=self.extract_entities)
 				dpg.add_button(label="Cancel", callback=self.close)
 
+	def remove_annots(self):
+		for page in self.doc:
+			self.doc.xref_set_key(page.xref, "Annots", "null")
+			self.doc.reload_page(page)
+		self.save_pixmap()
+		self.update_texture()
+
+	def highlight_entities(self):
+		for i, page in enumerate(self.doc):
+			for e in self.root_entities[i].children:
+				quads = page.search_for(e.spot, quads=True)
+				annot = page.add_highlight_annot(quads)
+			self.doc.reload_page(page)
+		self.save_pixmap()
+		self.update_texture()
+
 	def update_texture(self):
 		filepath = os.path.join(self.img_dir, f"page-{self.pn}.png")
 		w, h, _, data = dpg.load_image(filepath)
@@ -125,7 +141,7 @@ class Paper:
 				j += 1.0
 				children += Entity.dandelion_extract(b, f"Page-{i} Root Entity")
 				dpg.set_value("pbar", j / buffers)
-			root = Entity(f"Page-{i} Root Entity", "", "", children=children)
+			root = Entity(f"Page-{i} Root Entity", "", "", "", children=children)
 			root.propogate_paper_ptr(self)
 			self.root_entities.append(root)
 		dpg.delete_item("pbar_window")
@@ -144,6 +160,11 @@ class Paper:
 		# propogate window closes through entity tree
 		for r in self.root_entities:
 			r.close()
+	
+	def highlighted(self):
+		for p in self.doc:
+			if p.first_annot: return 1
+		return 0
 
 	def save(self):
 		if not len(self.root_entities): return

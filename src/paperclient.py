@@ -12,15 +12,31 @@ class PaperClient:
 		self.current_paper = None
 		self.selected_filename = None
 
-		with dpg.window(label="Paper client", tag="paper-client", width=400, height=100, pos=[625,50]):
+		with dpg.window(label="Paper client", tag="paper-client", width=400, height=150, pos=[625,50]):
 			dpg.add_text("Choose research paper:")
 			dpg.add_combo(items=glob.glob(os.path.join(PAPER_PATH, '*.pdf')), tag="paper-chooser")
 			dpg.add_button(label="Load selected paper", callback=self.load_paper)
+			dpg.add_separator()
+			dpg.add_button(label="Toggle entity highlighting", callback=self.toggle_highlight)
+
+			"""
+			dpg.add_separator()
+			dpg.add_text("Download pdf from url")
+			dpg.add_input_text(label="")
+			dpg.add_button(label="Download pdf")
+			"""
 
 		dpg.add_window(label="Viewer", tag="viewer_window", width=600, height=800)
 		with dpg.texture_registry():
 			dpg.add_raw_texture(width=612, height=794, tag="texture_tag", default_value=[])
 			dpg.add_image("texture_tag", parent="viewer_window")
+
+	def toggle_highlight(self):
+		if self.current_paper != None:
+			if self.current_paper.highlighted():
+				self.current_paper.remove_annots()
+			else:
+				self.current_paper.highlight_entities()
 
 	def cancel_choice(self):
 		# os.remove(os.path.join(PAPER_PATH, self.selected_filename))

@@ -8,9 +8,20 @@ import dearpygui.dearpygui as dpg
 class Entity:
 	s = requests.Session()
 
-	def __init__(self, name, url, abstract, parent=None, found=None, depth=0, children=[]):
+	def __init__(self,
+		name: str,
+		spot: str,
+		url: str,
+		abstract: str,
+		parent: str | None = None,
+		found: set['Entity'] | None = None,
+		depth: int = 0,
+		children: list['Entity'] =[]
+	):
 		self.paper = None
 		self.name = name
+		self.spot = spot
+		self.label = self.spot + " :: " + self.name
 		self.abstract = abstract
 		self.url = url
 		self.parent = parent
@@ -61,7 +72,8 @@ class Entity:
 		try:
 			for x in json['annotations']:
 				entities.add((x['label']))
-				refs[x['label']]=(x['uri'], x['abstract'])
+				refs[x['label']]=(x['uri'], x['abstract'], x['spot'])
+				print("Extracted entity:", x['spot'], " :: ", x['label'])
 		except  KeyError as e:
 			print("Key error", e)
 			print(json)
@@ -72,7 +84,7 @@ class Entity:
 		else:
 			found = entities
 
-		return [Entity(e, refs[e][0], refs[e][1], parent, found=found, depth=depth) for e in entities]
+		return [Entity(e, refs[e][2], refs[e][0], refs[e][1], parent, found=found, depth=depth) for e in entities]
 
 	def __getstate__(self):
 		state = {
@@ -98,7 +110,7 @@ class Entity:
 
 	def render_child_layer(self):
 		with dpg.window(
-			label=self.name,
+			label=self.label,
 			tag=self.wtag+self.suffix,
 			width=self.width,
 			height=self.height,
@@ -113,8 +125,8 @@ class Entity:
 
 	def render_summary(self):
 		with dpg.collapsing_header(
-			label=self.name,
-			filter_key=self.name,
+			label=self.label,
+			filter_key=self.label,
 			parent=self.parent
 		):
 			dpg.add_text(self.abstract, wrap=350)
