@@ -14,7 +14,7 @@ class PaperClient:
 
 		with dpg.window(label="Paper client", tag="paper-client", width=400, height=100, pos=[625,50]):
 			dpg.add_text("Choose research paper:")
-			dpg.add_combo(items=glob.glob(os.path.join(PAPER_PATH, '*.pdf')), tag="paper-chooser", callback=self.choose_paper)
+			dpg.add_combo(items=glob.glob(os.path.join(PAPER_PATH, '*.pdf')), tag="paper-chooser")
 			dpg.add_button(label="Load selected paper", callback=self.load_paper)
 
 		dpg.add_window(label="Viewer", tag="viewer_window", width=600, height=800)
@@ -22,17 +22,26 @@ class PaperClient:
 			dpg.add_raw_texture(width=612, height=794, tag="texture_tag", default_value=[])
 			dpg.add_image("texture_tag", parent="viewer_window")
 
-	def choose_paper(self, sender, app_data):
-		self.selected_filename = app_data.split('/')[-1]
-
 	def cancel_choice(self):
-		self.selected_filename = None
+		# os.remove(os.path.join(PAPER_PATH, self.selected_filename))
+		# os.rmdir(os.path.join(PAPER_PATH, self.selected_filename, "_imgs"))
+		dpg.configure_item("paper-chooser", items=glob.glob(os.path.join(PAPER_PATH, '*.pdf')))
+		self.current_paper.close()
+		self.selected_filename = ""
 		self.current_paper = None
 
 	def load_paper(self):
-		if self.selected_filename == None:
+		if self.current_paper != None and len(self.current_paper.root_entities) == 0:
+			self.cancel_choice()
+
+		print(dpg.get_value("paper-chooser"))
+		self.selected_filename = dpg.get_value("paper-chooser").split('/')[-1]
+		print(self.selected_filename)
+
+		if self.selected_filename == "":
 			print("No paper currently selected")
 			return
+
 		dpg.set_value("paper-chooser", "")
 
 		if self.current_paper != None:

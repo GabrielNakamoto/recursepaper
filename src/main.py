@@ -18,6 +18,9 @@ TODO:
 
 
 	[] api token usage confirmation
+
+
+	[] add a pdf url fetcher that will load a pdf from a server
 """
 
 def main():

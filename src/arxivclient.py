@@ -7,7 +7,6 @@ import dearpygui.dearpygui as dpg
 
 PAPER_PATH = path.abspath(path.join(path.dirname(__file__), os.pardir, 'papers'))
 
-
 class ArxivClient:
 	def __init__(self):
 		self.inner = arxiv.Client()
@@ -37,6 +36,7 @@ class ArxivClient:
 		dpg.set_value("arxiv-result-status", f"Found {len(self.results)} papers")
 
 	def button_callback(self, sender, app_data, user_data):
-		user_data.download_pdf(dirpath='./papers')
+		filepath = user_data.download_pdf(dirpath='./papers')
+		filename = filepath.split('/')[-1]
 		dpg.configure_item("paper-chooser", items=glob.glob(os.path.join(PAPER_PATH, '*.pdf')))
-
+		dpg.set_value("paper-chooser", os.path.join(PAPER_PATH, filename))

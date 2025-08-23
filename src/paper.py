@@ -146,6 +146,7 @@ class Paper:
 			r.close()
 
 	def save(self):
+		if not len(self.root_entities): return
 		print(f"Requested entity cache to {self.entpath}...")
 		pickle.dump(self.root_entities, open(self.entpath, 'wb'))
 
