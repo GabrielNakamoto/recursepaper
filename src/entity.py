@@ -6,6 +6,8 @@ import dearpygui.dearpygui as dpg
 
 
 class Entity:
+	s = requests.Session()
+
 	def __init__(self, name, url, abstract, parent=None, found=None, depth=0, children=[]):
 		self.paper = None
 		self.name = name
@@ -44,10 +46,15 @@ class Entity:
 		entities = set()
 		refs = dict()
 
-		payload = {"text":buffer, "token":os.environ['DAND_TOKEN'], "min_confidence":0.7, "include":"abstract"}
+		config = {
+			"text":buffer,
+			"token":os.environ['DAND_TOKEN'],
+			"min_confidence":0.7,
+			"include":"abstract,image",
+			"epsilon": 0.4
+		}
 		url = "https://api.dandelion.eu/datatxt/nex/v1"
-		response = requests.get(url, params=payload)
-
+		response = Entity.s.get(url, params=config)
 		Entity.dandelion_status(response.headers)
 
 		json = response.json()
@@ -90,7 +97,13 @@ class Entity:
 			c.propogate_paper_ptr(paper)
 
 	def render_child_layer(self):
-		with dpg.window(label=self.name, tag=self.wtag+self.suffix, width=self.width, height=self.height, pos=self.pos):
+		with dpg.window(
+			label=self.name,
+			tag=self.wtag+self.suffix,
+			width=self.width,
+			height=self.height,
+			pos=self.pos
+		):
 			dpg.add_input_text(label="Search", tag=self.wtag+self.suffix+"_search", callback=self.search)
 			dpg.add_button(label="clear search", callback=self.clear)
 			with dpg.filter_set(tag=self.wtag+self.suffix+"_filter_set"):
