@@ -6,10 +6,11 @@ Hobby program intended to improve understanding while reading research papers.
 - Get a free [Dandelion API key](https://dandelion.eu/) which provides 1000 tks/day of entity extraction
 - run:
   ```
-  export DAND_TOKEN=<your API key>`
+  export DAND_TOKEN=<your API key>
   pip install dearpygui requests pymupdf arxiv
   git clone https://github.com/GabrielNakamoto/recursepaper
   cd recursepaper
+  mkdir entities papers
   python3 src/main.py
   ```
 
@@ -30,3 +31,10 @@ Any entity extraction that is performed on a paper will be cached recursively an
 ## Example video
 https://github.com/user-attachments/assets/e20d4d07-a2aa-4666-a07d-0f7fee587e90
 
+## Todo
+
+- Retrieve entity thumbnails from youtube
+- Support pdf fetching from url (wget?)
+- make runnable from path name
+- better error handling + more descriptive messages
+- proper logging instead of printing logs to stdout
