@@ -33,7 +33,7 @@ https://github.com/user-attachments/assets/e20d4d07-a2aa-4666-a07d-0f7fee587e90
 
 ## Todo
 
-- Retrieve entity thumbnails from youtube
+- Retrieve entity thumbnails from wikipedia
 - Support pdf fetching from url (wget?)
 - make runnable from path name
 - better error handling + more descriptive messages
